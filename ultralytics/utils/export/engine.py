@@ -182,6 +182,15 @@ def onnx2engine(
         config.set_flag(trt.BuilderFlag.INT8)
         config.profiling_verbosity = trt.ProfilingVerbosity.DETAILED
 
+        for i in range(network.num_layers):
+            layer = network.get_layer(i)
+            name = layer.name
+            if "model.22" in name:
+                if (("Conv" in name or "Sigmoid" in name or "Mul" in name or "Add" in name)and "Mul_output_0" not in name and "Mul_1_output_0" not in name):
+                        layer.precision = trt.DataType.HALF
+                        for j in range(layer.num_outputs):
+                            layer.set_output_type(j, trt.DataType.HALF)
+
         class EngineCalibrator(trt.IInt8Calibrator):
             """Custom INT8 calibrator for TensorRT engine optimization.
 
@@ -212,11 +221,13 @@ def onnx2engine(
                 trt.IInt8Calibrator.__init__(self)
                 self.dataset = dataset
                 self.data_iter = iter(dataset)
-                self.algo = (
-                    trt.CalibrationAlgoType.ENTROPY_CALIBRATION_2  # DLA quantization needs ENTROPY_CALIBRATION_2
-                    if dla is not None
-                    else trt.CalibrationAlgoType.MINMAX_CALIBRATION
-                )
+                # self.algo = (
+                #     trt.CalibrationAlgoType.ENTROPY_CALIBRATION_2  # DLA quantization needs ENTROPY_CALIBRATION_2
+                #     if dla is not None
+                #     else trt.CalibrationAlgoType.MINMAX_CALIBRATION
+                # )
+                # self.algo = trt.CalibrationAlgoType.MINMAX_CALIBRATION
+                self.algo = trt.CalibrationAlgoType.ENTROPY_CALIBRATION_2
                 self.batch = dataset.batch_size
                 self.cache = Path(cache)
 
@@ -270,8 +281,8 @@ def onnx2engine(
             t.write(engine)
     else:
         with builder.build_engine(network, config) as engine, open(engine_file, "wb") as t:
-            if metadata is not None:
-                meta = json.dumps(metadata)
-                t.write(len(meta).to_bytes(4, byteorder="little", signed=True))
-                t.write(meta.encode())
+            # if metadata is not None:
+            #     meta = json.dumps(metadata)
+            #     t.write(len(meta).to_bytes(4, byteorder="little", signed=True))
+            #     t.write(meta.encode())
             t.write(engine.serialize())
