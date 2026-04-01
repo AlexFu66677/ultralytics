@@ -19,7 +19,7 @@ from ultralytics.utils import DEFAULT_CFG, LOGGER, RANK
 from ultralytics.utils.patches import override_configs
 from ultralytics.utils.plotting import plot_images, plot_labels
 from ultralytics.utils.torch_utils import torch_distributed_zero_first, unwrap_model
-
+from ultralytics.models.yolo.detect.utils import relabel_cls_by_box_area
 
 class DetectionTrainer(BaseTrainer):
     """A class extending the BaseTrainer class for training based on a detection model.
@@ -134,7 +134,7 @@ class DetectionTrainer(BaseTrainer):
                 ]  # new shape (stretched to gs-multiple)
                 imgs = nn.functional.interpolate(imgs, size=ns, mode="bilinear", align_corners=False)
             batch["img"] = imgs
-        return batch
+        return relabel_cls_by_box_area(batch)
 
     def set_model_attributes(self):
         """Set model attributes based on dataset information."""

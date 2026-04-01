@@ -16,7 +16,7 @@ from ultralytics.utils import LOGGER, RANK, nms, ops
 from ultralytics.utils.checks import check_requirements
 from ultralytics.utils.metrics import ConfusionMatrix, DetMetrics, box_iou
 from ultralytics.utils.plotting import plot_images
-
+from ultralytics.models.yolo.detect.utils import relabel_cls_by_box_area
 
 class DetectionValidator(BaseValidator):
     """A class extending the BaseValidator class for validation based on a detection model.
@@ -73,7 +73,7 @@ class DetectionValidator(BaseValidator):
             if isinstance(v, torch.Tensor):
                 batch[k] = v.to(self.device, non_blocking=self.device.type == "cuda")
         batch["img"] = (batch["img"].half() if self.args.half else batch["img"].float()) / 255
-        return batch
+        return relabel_cls_by_box_area(batch)
 
     def init_metrics(self, model: torch.nn.Module) -> None:
         """Initialize evaluation metrics for YOLO detection validation.
