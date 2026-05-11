@@ -16,6 +16,7 @@ from ultralytics.utils import LOGGER, RANK, nms, ops
 from ultralytics.utils.checks import check_requirements
 from ultralytics.utils.metrics import ConfusionMatrix, DetMetrics, box_iou
 from ultralytics.utils.plotting import plot_images
+from ultralytics.models.yolo.detect.utils import relabel_cls_by_box_area
 
 
 class DetectionValidator(BaseValidator):

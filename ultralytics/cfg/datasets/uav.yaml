@@ -1,0 +1,16 @@
+path: C:\Users\fjl\Desktop\240
+train: val
+val: val
+test: val
+
+# Classes
+names:
+  0: uav_s
+  1: plane
+  2: bird_s
+  3: balloon
+  4: kite
+  5: uav_m
+  6: uav_l
+  7: bird_m
+  8: bird_l

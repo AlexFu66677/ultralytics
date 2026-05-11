@@ -19,6 +19,7 @@ from ultralytics.utils import DEFAULT_CFG, LOGGER, RANK
 from ultralytics.utils.patches import override_configs
 from ultralytics.utils.plotting import plot_images, plot_labels
 from ultralytics.utils.torch_utils import torch_distributed_zero_first, unwrap_model
+from ultralytics.models.yolo.detect.utils import relabel_cls_by_box_area
 
 
 class DetectionTrainer(BaseTrainer):
@@ -61,6 +62,7 @@ class DetectionTrainer(BaseTrainer):
             _callbacks (dict, optional): Dictionary of callback functions to be executed during training.
         """
         super().__init__(cfg, overrides, _callbacks)
+        self.epoch_cls_count = None
 
     def build_dataset(self, img_path: str, mode: str = "train", batch: int | None = None):
         """Build YOLO Dataset for training or validation.
@@ -134,8 +136,25 @@ class DetectionTrainer(BaseTrainer):
                 ]  # new shape (stretched to gs-multiple)
                 imgs = nn.functional.interpolate(imgs, size=ns, mode="bilinear", align_corners=False)
             batch["img"] = imgs
-        return batch
+            batch = relabel_cls_by_box_area(batch)
+            cls = batch["cls"].view(-1).long()
 
+            if self.epoch_cls_count is None:
+                self.epoch_cls_count = torch.zeros(self.data["nc"], dtype=torch.long)
+            for c in cls:
+                self.epoch_cls_count[c] += 1
+        return batch
+    
+    def print_epoch_cls_count(self):
+
+        if self.epoch_cls_count is None:
+            return
+        LOGGER.info("\n========== Relabeled Class Count ==========")
+        for i, count in enumerate(self.epoch_cls_count.tolist()):
+            LOGGER.info(f"{i}: {count}")
+        LOGGER.info("==========================================\n")
+        self.epoch_cls_count = None
+        
     def set_model_attributes(self):
         """Set model attributes based on dataset information."""
         # Nl = de_parallel(self.model).model[-1].nl  # number of detection layers (to scale hyps)
